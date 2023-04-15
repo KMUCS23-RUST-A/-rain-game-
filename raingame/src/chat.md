@@ -144,3 +144,55 @@ fn main() {
     endwin();
 }
 ```
+
+**********************************
+## 위의 코드는 사용자가 입력을 해야만 단어가 떨어지는 문제가 발생한다.
+![ver0 1](https://user-images.githubusercontent.com/38421491/232242320-06fb7e02-e595-4144-8eed-ed420568bf02.gif)
+
+***********************************
+
+## User) 위 코드에서 사용자의 입력을 받되 , 입력이 없어도 update를 할 수 있도록 해줘
+
+## GPT) 위의 코드에서, loop 안에서 getch 함수를 호출하여 사용자 입력을 가져옵니다. getch 함수는 사용자가 키를 누를 때까지 프로그램이 블로킹됩니다. 가져온 입력은 input 변수에 저장되며, 이 값을 update 메서드의 인자로 전달합니다. 만약 사용자 입력이 없는 경우, input 변수는 None이 됩니다. 따라서 update 메서드는 다음과 같이 수정해야합니다.
+
+```
+fn update(&mut self, input: Option<char>) -> bool {
+    self.spawn_word();
+    self.move_words();
+
+    let mut word_completed = false;
+
+    for i in 0..self.words.len() {
+        let word = &mut self.words[i];
+        word.y += 1;
+
+        if word.y >= HEIGHT {
+            self.score -= word.text.len() as i32;
+            self.words.remove(i);
+            continue;
+        }
+
+        if let Some(ch) = input {
+            if ch == word.text.chars().next().unwrap() {
+                word.text.remove(0);
+
+                if word.text.is_empty() {
+                    self.score += word.text.len() as i32;
+                    word_completed = true;
+                }
+            }
+        }
+    }
+
+    word_completed
+}
+```
+update 메서드는 이제 input 매개 변수가 Option<char> 타입이며, 사용자 입력이 없는 경우 None 값을 받을 수 있습니다. 이 경우, update 메서드에서는 단어가 이동하고, 글자가 제거되고, 점수가 갱신됩니다. 그러나 사용자 입력에 대해 처리하는 부분은 다음과 같이 수정되었습니다.
+
+input 매개 변수가 Some(ch) 일 경우, 즉 사용자가 입력을 한 경우
+현재 처리 중인 단어의 첫 번째 글자가 사용자 입력과 일치하는 경우
+현재 처리 중인 단어의 첫 번째 글자를 제거합니다.
+현재 처리 중인 단어의 길이가 0이되면, 점수를 증가시키고 word_completed
+    
+
+
