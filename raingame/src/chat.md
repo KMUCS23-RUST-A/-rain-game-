@@ -195,4 +195,22 @@ input 매개 변수가 Some(ch) 일 경우, 즉 사용자가 입력을 한 경�
 현재 처리 중인 단어의 길이가 0이되면, 점수를 증가시키고 word_completed
     
 
+## User) 위 프로그램을 실행하다가 panic 오류가 났어, 어떤 부분에서 오류가 발생한걸까?
+
+## GPT) 이 오류는 Rust 언어로 작성된 avoid_rain 프로젝트의 실행 중에 발생한 것으로 보입니다. 뒤에서 발생한 오류로 추정되며, Game::update 함수 내에서 Option<T>::unwrap() 메소드를 호출할 때 발생한 것 같습니다.
+
+이 오류는 unwrap() 메소드가 None 값을 갖는 Option 타입 변수를 대상으로 호출되었을 때 발생합니다. 따라서 Game::update 함수 내에서 Option 값을 사용하는 코드를 검토하고, 해당 변수가 None 값을 갖는 경우에 대해 처리해주어야 합니다.
+
+또한, Rust 컴파일러에서는 기본적으로 오류 메시지와 함께 일부 스택 추적 정보를 출력합니다. 이 정보는 프로그램의 어느 부분에서 오류가 발생했는지를 파악하는 데 도움이 됩니다. 이 정보를 활용하여 오류가 발생한 구체적인 원인을 찾아 수정할 수 있습니다.
+    
+## User) 위 코드에서 unwrap() 메소드가 None 값을 갖는 Option 타입 변수를 대상으로 호출되는 경우는 어떤 경우야?
+
+## GPT) 위 코드에서 unwrap() 메소드가 None 값을 갖는 Option 타입 변수를 대상으로 호출되는 경우는 input.unwrap() == word.text.chars().next().unwrap() 부분입니다. input 변수는 Option<char> 타입으로, getch() 함수에 의해 입력된 문자를 저장하고 있습니다. 이 함수는 입력된 문자가 없으면 None을 반환합니다. 따라서, 만약 사용자가 아무 입력도 하지 않고 엔터를 누른 경우, input 변수는 None이 됩니다. 이 때, 위 코드에서 input.unwrap()은 panic!을 일으키게 됩니다.
+
+## User) 그러면 input.unwrap()이 panic을 일으키게 하지 않으려면 어떻게 해야돼?
+    
+## GPT) unwrap() 메서드가 panic을 일으키지 않으려면, Option 타입 변수에 대한 먼저 match 구문을 사용하여 Some과 None 경우를 명시적으로 처리해야 합니다. 예를 들어, 다음과 같이 Option 값이 Some인 경우에만 unwrap() 메서드를 호출하고, None인 경우에는 기본값을 반환하도록 할 수 있습니다.
+    
+## User) 
+    
 
