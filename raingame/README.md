@@ -38,6 +38,9 @@
 - 게임 오버 후에 점수를 저장하고 랭킹 표시 기능 추가
 
 
+## 게임 시연
+
+![ver1](https://user-images.githubusercontent.com/38421491/232238912-1081534b-4c18-4bcf-bc0d-5a3fb9896e3c.gif)
 
 
 ## 라이선스
