@@ -1,102 +1,162 @@
-use crossterm::{cursor, event, execute, style::Print, terminal, Result};
-use rand::Rng;
-use std::io::{stdout, Write};
+extern crate rand;
+use crate::rand::Rng;
+
+use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-fn main() -> Result<()> {
-    let mut rng = rand::thread_rng();
-    let mut score = 0;
-    let mut incorrect_score = 0;
-    let mut correct_word = "".to_string();
-    let mut words = vec![generate_word(&mut rng)];
-    let mut level = 1;
-    let mut last_tick = Instant::now();
-    let mut game_over = false;
+use ncurses::*;
 
-    // 터미널 초기화
-    terminal::enable_raw_mode()?;
-    execute!(stdout(), terminal::Clear(terminal::ClearType::All))?;
-    execute!(stdout(), cursor::Hide)?;
+const MAX_WORD_LEN: usize = 10;
+const MIN_WORD_LEN: usize = 3;
+const MAX_WORDS: usize = 5;
+const WIDTH: i32 = 80;
+const HEIGHT: i32 = 24;
 
-    loop {
-        let elapsed = last_tick.elapsed();
-        last_tick += elapsed;
+struct Word {
+    x: f32,
+    y: f32,  //단어가 떨어지는 속도를 더 정밀하게 하기 위해 float형으로 수정,
+    text: String,
+}
 
-        // 동일한 속도로 단어들이 떨어지기 위해 경과된 시간을 이용
-        if elapsed >= Duration::from_millis((1000 / level as u64).saturating_sub(score)) {
-            words.push(generate_word(&mut rng));
+struct Game {
+    score: i32,
+    words: VecDeque<Word>,
+    last_spawn_time: Instant,
+    word_len: usize,
+}
+
+impl Game {
+    fn new() -> Self {
+        Game {
+            score: 0,
+            words: VecDeque::new(),
+            last_spawn_time: Instant::now(),
+            word_len: 0,
         }
+    }
 
-        // 화면에 출력
-        execute!(stdout(), cursor::MoveTo(0, 0), Print(format!("Score: {}", score)))?;
-        execute!(stdout(), cursor::MoveTo(0, 1), Print(format!("Level: {}", level)))?;
+    fn update(&mut self, input: Option<char>) -> bool {
+        self.spawn_word();
+        self.move_words();
 
-        for (i, word) in words.iter().enumerate() {
-            let y = (i + 3) as u16; // Score, Level 이후 위치
-            execute!(stdout(), cursor::MoveTo(0, y), Print("   "))?;
-            execute!(
-                stdout(),
-                cursor::MoveTo(0, y),
-                Print(word.chars().map(|c| if c == ' ' { ' ' } else { '_' }).collect::<String>())
-            )?;
+        let mut word_completed = false;
+        /* 
+        for i in 0..self.words.len() {
+            let word = &mut self.words[i];
+            word.y += 0.1;
+
+            if word.y >= HEIGHT as f32{
+                self.score -= word.text.len() as i32;
+                self.words.remove(i);
+                continue;
+            }
+
+            if input.is_some() && input.unwrap_or_default() == word.text.chars().next().unwrap_or_default()&& !word.text.is_empty() {
+                word.text.remove(0);
+
+                if word.text.is_empty() {
+                    self.score += word.text.len() as i32;
+                    word_completed = true;
+                }
+            }
         }
-
-        if let Some(key_event) = event::poll(Duration::from_millis(10))? {
-            if let event::Event::Key(key) = key_event {
-                if !game_over && key.code == event::KeyCode::Backspace && !correct_word.is_empty() {
-                    correct_word.pop();
-                } else if !game_over && key.code == event::KeyCode::Char(c) {
-                    correct_word.push(c);
-                } else if key.code == event::KeyCode::Char('q') {
-                    break;
+        */
+        for i in (0..self.words.len()).rev() {
+            let word = &mut self.words[i];
+            word.y += 0.1;
+        
+            if word.y >= HEIGHT as f32 {
+                self.score -= word.text.len() as i32;
+                if !self.words.is_empty() {
+                    self.words.remove(i);
+                }
+                continue;
+            }
+        
+            if input.is_some()
+                && input.unwrap_or_default() == word.text.chars().next().unwrap_or_default()
+                && !word.text.is_empty()
+            {
+                word.text.remove(0);
+        
+                if word.text.is_empty() { // 수정된 부분: word_completed 계산 방식 변경
+                    self.score += self.word_len as i32;
+                    word_completed = true;
                 }
             }
         }
 
-        let correct = words.iter_mut().any(|word| {
-            if let Some(idx) = word.find(correct_word.as_str()) {
-                word.remove(idx);
-                return true;
-            }
-            false
-        });
+        word_completed
+    }
 
-        let corrected = correct_word.len() > 0 && !correct;
-        let incorrect = incorrect_score > 0 && incorrect_score % 5 == 0;
-        incorrect_score += if corrected { correct_word.len() } else { 0 };
-        correct_word.clear();
+    fn spawn_word(&mut self) {
+        if self.words.len() < MAX_WORDS && self.last_spawn_time.elapsed() > Duration::from_secs(2) {
+            let mut rng = rand::thread_rng();
+            self.word_len = rng.gen_range(MIN_WORD_LEN, MAX_WORD_LEN + 1); // 수정된 부분
+            let word_x = rng.gen_range(0.0, WIDTH as f32 - self.word_len as f32) as f32;
+            let word_y = 0.0;
+            let word_text: String = (0..self.word_len)
+                .map(|_| (rng.gen_range(b'a', b'z' + 1) as char))
+                .collect();
 
-        // 점수 계산
-        if corrected {
-            score += level * 2;
-            level = (score / 50) + 1;
-            incorrect_score /= 2;
-        }
-        if incorrect {
-            score -= 10;
-        }
-        if words.iter().any(|word| word.is_empty()) {
-            score -= 20;
-            game_over = true;
-            execute!(stdout(), cursor::MoveTo(0, 2), Print("You lose!"))?;
-        }
+            self.words.push_back(Word {
+                x: word_x,
+                y: word_y,
+                text: word_text,
+            });
 
-        // 최종 출력
-        execute!(stdout(), cursor::Hide)?;
-        execute!(stdou t(), terminal::Clear(terminal::ClearType::All))?;
-        stdout().flush()?;
-        if game_over {
-            return Ok(());
+            self.last_spawn_time = Instant::now();
+        }
+    }
+
+    fn move_words(&mut self) {
+        for word in &mut self.words {
+            word.y += 0.1;
         }
     }
 }
 
-fn generate_word(rng: &mut rand::RngCore) -> String {
-    let words = vec![
-        "apple", "banana", "cherry", "durian", "elderberry", "fig", "grape", "honey", "kiwi",
-        "lemon", "melon", "orange", "pear", "quince", "raspberry", "strawberry", "tangerine",
-        "watermelon",
-    ];
+fn main() {
+    initscr();
+    cbreak();
+    //noecho();
+    timeout(0);
+    curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+    keypad(stdscr(), true);
 
-    words[rng.gen_range(0..words.len())].into()
+    let mut game = Game::new();
+
+    loop {
+        let input = getch();
+
+        if input == KEY_F1 {
+            break;
+        }
+
+        erase();
+
+        let input_char = if (input >= 0) && (input <= 255) {
+            char::from_u32(input as u32)
+        } else {
+            None
+        };
+        let word_completed = game.update(input_char);
+        if word_completed {
+            beep();
+        }
+
+        let score_str = format!("Score: {}", game.score);
+        mvprintw(0 as i32, 0 as i32, score_str.as_str());
+
+        for word in &game.words {
+            mvprintw(word.y as i32, word.x as i32, word.text.as_str());
+        }
+        // 추가된 부분: 입력 프롬프트 문자열을 출력합니다.
+        let input_prompt_str = "> ";
+        mvprintw(HEIGHT - 1, 0, input_prompt_str);
+        refresh();
+        napms(100);
+    }
+
+    endwin();
 }
