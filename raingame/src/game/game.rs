@@ -5,6 +5,7 @@ use rand::Rng;
 
 use ncurses::*;
 
+use super::vocab::VocabGenerator;
 use super::word::Word;
 
 const MAX_WORD_LEN: usize = 10;
@@ -21,6 +22,7 @@ pub struct Game {
     speed_factor: f32,
     height: i32,
     width: i32,
+    vocab_generator: VocabGenerator,
 }
 
 impl Game {
@@ -35,6 +37,7 @@ impl Game {
             speed_factor: 0.0,
             height: height,
             width: width,
+            vocab_generator: VocabGenerator::new(),
         }
     }
 
@@ -85,9 +88,7 @@ impl Game {
             self.word_len = rng.gen_range(MIN_WORD_LEN, MAX_WORD_LEN + 1);
             let word_x = rng.gen_range(0.0, self.width as f32 - self.word_len as f32) as f32;
             let word_y = 0.0;
-            let word_text: String = (0..self.word_len)
-                .map(|_| (rng.gen_range(b'a', b'z' + 1) as char))
-                .collect();
+            let word_text = self.vocab_generator.generate();
 
             self.words.push_back(Word::new(word_x, word_y, word_text));
 
