@@ -553,7 +553,7 @@ start_time 변수에 게임이 시작된 시간을 저장하고, time_limit 변�
 
 아래와 같이 Game 구조체에 speed_factor라는 값을 추가합니다. 이 값은 점수가 올라갈수록 증가하도록 설정하고, 게임이 시작될 때 초기값은 0입니다. update 함수에서 단어가 떨어지는 속도를 계산할 때 speed_factor를 곱해주면 됩니다.
     
-    ```
+```
     struct Game {
     ...
     speed_factor: f32,  // 추가된 부분
@@ -587,9 +587,398 @@ start_time 변수에 게임이 시작된 시간을 저장하고, time_limit 변�
 speed_factor 값은 점수가 1000점일 때 0.1을 더한 0.2가 되도록 설정했습니다. 적절한 값은 여러 번 플레이하면서 실험해보면서 조정할 수 있습니다.
     
 
-    
+---
 
 
- 
-    
+당신은 rust 개발자이다.
+아래 코드를 목적과 의도에 따라 다양한 파일 및 클래스로 refactoring하라.
 
+extern crate rand;
+use crate::rand::Rng;
+
+use std::collections::VecDeque;
+use std::time::{Duration, Instant};
+
+use ncurses::*;
+
+const MAX_WORD_LEN: usize = 10;
+const MIN_WORD_LEN: usize = 3;
+const MAX_WORDS: usize = 5;
+const WIDTH: i32 = 80;
+const HEIGHT: i32 = 24;
+
+struct Word {
+    x: f32,
+    y: f32,  //단어가 떨어지는 속도를 더 정밀하게 하기 위해 float형으로 수정,
+    text: String,
+}
+
+struct Game {
+    score: i32,
+    words: VecDeque<Word>,
+    last_spawn_time: Instant,
+    word_len: usize,
+    time_limit: Duration,
+    elapsed_time: Duration,
+    speed_factor: f32,  // 추가된 부분
+}
+
+impl Game {
+    fn new() -> Self {
+        Game {
+            score: 0,
+            words: VecDeque::new(),
+            last_spawn_time: Instant::now(),
+            word_len: 0,
+            time_limit: Duration::from_secs(60),
+            elapsed_time: Duration::default(),
+            speed_factor: 0.0,  // 추가된 부분
+        }
+    }
+
+    fn update(&mut self, input: Option<char>) -> bool {
+        self.spawn_word();
+        self.move_words();
+
+        let mut word_completed = false;
+
+        for i in (0..self.words.len()).rev() {
+            let word = &mut self.words[i];
+            word.y += self.speed_factor;  // 수정된 부분
+
+            if word.y >= HEIGHT as f32 {
+                self.score -= word.text.len() as i32;
+                if !self.words.is_empty() {
+                    self.words.remove(i);
+                }
+                continue;
+            }
+
+            if input.is_some()
+                && input.unwrap_or_default() == word.text.chars().next().unwrap_or_default()
+                && !word.text.is_empty()
+            {
+                word.text.remove(0);
+
+                if word.text.is_empty() {
+                    self.score += self.word_len as i32;
+                    word_completed = true;
+                }
+            }
+        }
+
+        if self.elapsed_time >= self.time_limit {
+            return false;
+        }
+
+        self.elapsed_time += Duration::from_millis(100);
+        self.speed_factor = 0.1 + self.score as f32 / 1000.0;  // 추가된 부분
+
+        word_completed
+    }
+
+    fn spawn_word(&mut self) {
+        if self.words.len() < MAX_WORDS && self.last_spawn_time.elapsed() > Duration::from_secs(2) {
+            let mut rng = rand::thread_rng();
+            self.word_len = rng.gen_range(MIN_WORD_LEN, MAX_WORD_LEN + 1);
+            let word_x = rng.gen_range(0.0, WIDTH as f32 - self.word_len as f32) as f32;
+            let word_y = 0.0;
+            let word_text: String = (0..self.word_len)
+                .map(|_| (rng.gen_range(b'a', b'z' + 1) as char))
+                .collect();
+
+            self.words.push_back(Word {
+                x: word_x,
+                y: word_y,
+                text: word_text,
+            });
+
+            self.last_spawn_time = Instant::now();
+        }
+    }
+
+    fn move_words(&mut self) {
+        for word in &mut self.words {
+            word.y += 0.1;
+        }
+    }
+}
+
+
+fn main() {
+    initscr();
+    cbreak();
+    //noecho();
+    timeout(0);
+    curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+    keypad(stdscr(), true);
+
+    let mut game = Game::new();
+    let start_time = Instant::now();
+    let time_limit = Duration::from_secs(60);
+
+    loop {
+        let input = getch();
+
+        if input == KEY_F1 || start_time.elapsed() >= time_limit {
+            break;
+        }
+
+        erase();
+
+        let input_char = if (input >= 0) && (input <= 255) {
+            char::from_u32(input as u32)
+        } else {
+            None
+        };
+        let word_completed = game.update(input_char);
+        if word_completed {
+            beep();
+        }
+
+        let score_str = format!("Score: {}", game.score);
+        let time_left_str = format!("Time left: {:.1}s", (time_limit - start_time.elapsed()).as_secs_f32());
+        mvprintw(0 as i32, 0 as i32, score_str.as_str());
+        mvprintw(0 as i32, (WIDTH / 2) as i32, time_left_str.as_str());
+
+        for word in &game.words {
+            mvprintw(word.y as i32, word.x as i32, word.text.as_str());
+        }
+        // 추가된 부분: 입력 프롬프트 문자열을 출력합니다.
+        let input_prompt_str = "> ";
+        mvprintw(HEIGHT - 1, 0, input_prompt_str);
+        refresh();
+        napms(100);
+    }
+
+    let final_score_str = format!("Final Score: {}", game.score);
+    mvprintw((HEIGHT / 2) as i32, (WIDTH / 2 - final_score_str.len() as i32 / 2) as i32, final_score_str.as_str());
+    mvprintw((HEIGHT / 2 + 1) as i32, (WIDTH / 2 - 5) as i32, "Press any key to exit...");
+    refresh();
+    getch();
+    endwin();
+}
+
+---
+
+AI: The given code can be refactored into multiple files and classes as follows:
+
+1.	`main.rs`: This file contains the main function and the game loop.
+
+```rust
+mod game;
+
+use game::Game;
+
+use ncurses::*;
+
+const WIDTH: i32 = 80;
+const HEIGHT: i32 = 24;
+
+fn main() {
+    initscr();
+    cbreak();
+    timeout(0);
+    curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+    keypad(stdscr(), true);
+
+    let mut game = Game::new();
+
+    loop {
+        let input = getch();
+
+        if input == KEY_F1 || game.is_game_over() {
+            break;
+        }
+
+        erase();
+
+        let input_char = if (input >= 0) && (input <= 255) {
+            char::from_u32(input as u32)
+        } else {
+            None
+        };
+        let word_completed = game.update(input_char);
+        if word_completed {
+            beep();
+        }
+
+        printw(&format!("Score: {}\n", game.get_score()));
+        printw(&format!("Time left: {:.1}s\n", game.get_time_left()));
+        game.draw_words();
+
+        // Print input prompt
+        let input_prompt_str = "> ";
+        mvprintw(HEIGHT - 1, 0, input_prompt_str);
+        refresh();
+        napms(100);
+    }
+
+    printw(&format!("Final Score: {}\n", game.get_score()));
+    printw("Press any key to exit...");
+    refresh();
+    getch();
+    endwin();
+}
+```
+
+2.	`game.rs`: This file contains the ﻿Game struct and its implementation.
+```rust
+mod word;
+
+use std::collections::VecDeque;
+use std::time::{Duration, Instant};
+
+use rand::Rng;
+
+use ncurses::*;
+
+use crate::HEIGHT;
+use crate::WIDTH;
+
+use word::Word;
+
+const MAX_WORD_LEN: usize = 10;
+const MIN_WORD_LEN: usize = 3;
+const MAX_WORDS: usize = 5;
+
+pub struct Game {
+    score: i32,
+    words: VecDeque<Word>,
+    last_spawn_time: Instant,
+    word_len: usize,
+    time_limit: Duration,
+    elapsed_time: Duration,
+    speed_factor: f32,
+}
+
+impl Game {
+    pub fn new() -> Self {
+        Game {
+            score: 0,
+            words: VecDeque::new(),
+            last_spawn_time: Instant::now(),
+            word_len: 0,
+            time_limit: Duration::from_secs(60),
+            elapsed_time: Duration::default(),
+            speed_factor: 0.0,
+        }
+    }
+
+    pub fn update(&mut self, input: Option<char>) -> bool {
+        self.spawn_word();
+        self.move_words();
+
+        let mut word_completed = false;
+
+        for i in (0..self.words.len()).rev() {
+            let word = &mut self.words[i];
+            word.set_y(word.get_y() + self.speed_factor);
+
+            if word.get_y() >= HEIGHT as f32 {
+                self.score -= word.get_text().len() as i32;
+                if !self.words.is_empty() {
+                    self.words.remove(i);
+                }
+                continue;
+            }
+
+            if input.is_some()
+                && input.unwrap_or_default() == word.get_text().chars().next().unwrap_or_default()
+                && !word.get_text().is_empty()
+            {
+                word.get_text_mut().remove(0);
+
+                if word.get_text().is_empty() {
+                    self.score += self.word_len as i32;
+                    word_completed = true;
+                }
+            }
+        }
+
+        if self.elapsed_time >= self.time_limit {
+            return false;
+        }
+
+        self.elapsed_time += Duration::from_millis(100);
+        self.speed_factor = 0.1 + self.score as f32 / 1000.0;
+
+        word_completed
+    }
+
+    pub fn spawn_word(&mut self) {
+        if self.words.len() < MAX_WORDS && self.last_spawn_time.elapsed() > Duration::from_secs(2) {
+            let mut rng = rand::thread_rng();
+            self.word_len = rng.gen_range(MIN_WORD_LEN, MAX_WORD_LEN + 1);
+            let word_x = rng.gen_range(0.0, WIDTH as f32 - self.word_len as f32) as f32;
+            let word_y = 0.0;
+            let word_text: String = (0..self.word_len)
+                .map(|_| (rng.gen_range(b'a', b'z' + 1) as char))
+                .collect();
+
+            self.words.push_back(Word::new(word_x, word_y, word_text));
+
+            self.last_spawn_time = Instant::now();
+        }
+    }
+
+    pub fn move_words(&mut self) {
+        for word in &mut self.words {
+            word.set_y(word.get_y() + 0.1);
+        }
+    }
+
+    pub fn draw_words(&self) {
+        for word in &self.words {
+            mvprintw(word.get_y() as i32, word.get_x() as i32, word.get_text().as_str());
+        }
+    }
+
+    pub fn get_score(&self) -> i32 {
+        self.score
+    }
+
+    pub fn get_time_left(&self) -> f32 {
+        (self.time_limit - self.elapsed_time).as_secs_f32()
+    }
+
+    pub fn is_game_over(&self) -> bool {
+        self.elapsed_time >= self.time_limit
+    }
+}
+```
+
+3.	`word.rs`: This file contains the `Word` struct and its implementation.
+
+```rust
+pub struct Word {
+    x: f32,
+    y: f32,
+    text: String,
+}
+
+impl Word {
+    pub fn new(x: f32, y: f32, text: String) -> Self {
+        Word { x, y, text }
+    }
+
+    pub fn get_x(&self) -> f32 {
+        self.x
+    }
+
+    pub fn get_y(&self) -> f32 {
+        self.y
+    }
+
+    pub fn set_y(&mut self, y: f32) {
+        self.y = y;
+    }
+
+    pub fn get_text(&self) -> &String {
+        &self.text
+    }
+
+    pub fn get_text_mut(&mut self) -> &mut String {
+        &mut self.text
+    }
+}
