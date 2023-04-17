@@ -15,6 +15,7 @@ fn main() {
     keypad(stdscr(), true);
 
     let mut game = Game::new(HEIGHT, WIDTH);
+    let line = "-".repeat(WIDTH as usize);
 
     loop {
         let input = getch();
@@ -40,8 +41,7 @@ fn main() {
         game.draw_words();
 
         // Print input prompt
-        let input_prompt_str = "> ";
-        mvprintw(HEIGHT - 1, 0, input_prompt_str);
+        mvprintw(HEIGHT - 1, 0, &line);
         refresh();
         napms(100);
     }
