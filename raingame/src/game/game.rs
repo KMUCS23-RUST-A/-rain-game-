@@ -8,15 +8,12 @@ use ncurses::*;
 use super::vocab::VocabGenerator;
 use super::word::Word;
 
-const MAX_WORD_LEN: usize = 10;
-const MIN_WORD_LEN: usize = 3;
 const MAX_WORDS: usize = 5;
 
 pub struct Game {
     score: i32,
     words: VecDeque<Word>,
     last_spawn_time: Instant,
-    word_len: usize,
     time_limit: Duration,
     elapsed_time: Duration,
     speed_factor: f32,
@@ -32,7 +29,6 @@ impl Game {
             score: 0,
             words: VecDeque::new(),
             last_spawn_time: Instant::now(),
-            word_len: 0,
             time_limit: Duration::from_secs(60),
             elapsed_time: Duration::default(),
             speed_factor: 0.0,
@@ -51,6 +47,15 @@ impl Game {
 
         if input.is_some() {
             if input.unwrap() == '\n' {
+                for i in (0..self.words.len()).rev() {
+                    let word = &mut self.words[i];
+                    if self.input_string == word.get_text().clone() {
+                        self.score += word.get_text().len() as i32;
+                        self.words.remove(i);
+                        word_completed = true;
+                        break;
+                    }
+                }
                 self.input_string = String::new();
             } else {
                 self.input_string.push(input.unwrap());
@@ -63,22 +68,7 @@ impl Game {
 
             if word.get_y() >= self.height as f32 {
                 self.score -= word.get_text().len() as i32;
-                if !self.words.is_empty() {
-                    self.words.remove(i);
-                }
-                continue;
-            }
-
-            if input.is_some()
-                && input.unwrap_or_default() == word.get_text().chars().next().unwrap_or_default()
-                && !word.get_text().is_empty()
-            {
-                word.get_text_mut().remove(0);
-
-                if word.get_text().is_empty() {
-                    self.score += self.word_len as i32;
-                    word_completed = true;
-                }
+                self.words.remove(i);
             }
         }
 
@@ -95,11 +85,9 @@ impl Game {
     fn spawn_word(&mut self) {
         if self.words.len() < MAX_WORDS && self.last_spawn_time.elapsed() > Duration::from_secs(2) {
             let mut rng = rand::thread_rng();
-            self.word_len = rng.gen_range(MIN_WORD_LEN, MAX_WORD_LEN + 1);
-            let word_x = rng.gen_range(0.0, self.width as f32 - self.word_len as f32) as f32;
-            let word_y = 0.0;
             let word_text = self.vocab_generator.generate();
-
+            let word_x = rng.gen_range(0.0, self.width as f32 - word_text.len() as f32) as f32;
+            let word_y = 0.0;
             self.words.push_back(Word::new(word_x, word_y, word_text));
 
             self.last_spawn_time = Instant::now();

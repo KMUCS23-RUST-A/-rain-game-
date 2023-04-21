@@ -24,8 +24,4 @@ impl Word {
     pub fn get_text(&self) -> &String {
         &self.text
     }
-
-    pub fn get_text_mut(&mut self) -> &mut String {
-        &mut self.text
-    }
 }
