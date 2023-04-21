@@ -15,6 +15,7 @@ fn main() {
     keypad(stdscr(), true);
 
     let mut game = Game::new(HEIGHT, WIDTH);
+    let line = "-".repeat(WIDTH as usize);
 
     loop {
         let input = getch();
@@ -44,6 +45,7 @@ fn main() {
         // Print input prompt
         let input_prompt = format!("> {}", game.get_input_string());
 
+        mvprintw(HEIGHT - 2, 0, &line);
         mvprintw(HEIGHT - 1, 0, input_prompt.as_str());
         refresh();
         napms(100);
