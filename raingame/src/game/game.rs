@@ -23,6 +23,7 @@ pub struct Game {
     height: i32,
     width: i32,
     vocab_generator: VocabGenerator,
+    input_string: String,
 }
 
 impl Game {
@@ -38,6 +39,7 @@ impl Game {
             height: height,
             width: width,
             vocab_generator: VocabGenerator::new(),
+            input_string: String::new(),
         }
     }
 
@@ -46,6 +48,14 @@ impl Game {
         self.move_words();
 
         let mut word_completed = false;
+
+        if input.is_some() {
+            if input.unwrap() == '\n' {
+                self.input_string = String::new();
+            } else {
+                self.input_string.push(input.unwrap());
+            }
+        }
 
         for i in (0..self.words.len()).rev() {
             let word = &mut self.words[i];
@@ -122,5 +132,13 @@ impl Game {
 
     pub fn is_game_over(&self) -> bool {
         self.elapsed_time >= self.time_limit
+    }
+
+    pub fn get_input_string(&self) -> String {
+        self.input_string.clone()
+    }
+
+    pub fn backspace(&mut self) {
+        self.input_string.pop();
     }
 }

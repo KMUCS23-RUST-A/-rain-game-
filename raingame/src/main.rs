@@ -22,7 +22,9 @@ fn main() {
         if input == KEY_F1 || game.is_game_over() {
             break;
         }
-
+        if input == KEY_BACKSPACE {
+            game.backspace();
+        }
         erase();
 
         let input_char = if (input >= 0) && (input <= 255) {
@@ -40,8 +42,9 @@ fn main() {
         game.draw_words();
 
         // Print input prompt
-        let input_prompt_str = "> ";
-        mvprintw(HEIGHT - 1, 0, input_prompt_str);
+        let input_prompt = format!("> {}", game.get_input_string());
+
+        mvprintw(HEIGHT - 1, 0, input_prompt.as_str());
         refresh();
         napms(100);
     }
