@@ -134,7 +134,7 @@ async fn handler(
                         }
                     }
                     None => {
-                        println!("[Server] [Client{} Handler] GOT 'None' from opponent client handler (unexpected)", client_no);
+                        println!("[Server] [Client{} Handler] Opponent client handler channel closed", client_no);
                         break;  // 클라이언트 핸들러 종료
                     }
                 }
