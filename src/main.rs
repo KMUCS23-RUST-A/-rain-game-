@@ -17,6 +17,7 @@ fn main() {
 
     let mut game = Game::new(HEIGHT, WIDTH);
     let line = "-".repeat(WIDTH as usize);
+    let mut game_state = GameState::StartGame;
 
     loop {
         erase();
@@ -32,26 +33,29 @@ fn main() {
                 || input == KEY_DC
                 || input == 127
                 || input_char.unwrap() == '\u{0008}'
+                || input_char.unwrap() == '='
             {
                 game.pop_input_string();
             }
             if input == KEY_ENTER || input == KEY_SEND || input_char.unwrap() == '\n' {
-                game.enter_input_string();
+                game_state = game.enter_input_string();
             }
         }
 
-        game.update(input_char);
-        let game_state = game.get_game_state();
+        if game_state == GameState::CompleteAttackWord {
+            // TODO
+        }
+        // if Attacked {
+        //     game.spawn_word()
+        // }
+
+        game_state = game.update(input_char); // game_state = InProgress or Lose
 
         if game_state == GameState::Lose {
             break;
         };
-        if game_state == GameState::TimeOver {
-            break;
-        };
 
         addstr(&format!("Score: {}\n", game.get_score()));
-        addstr(&format!("Time left: {:.1}s\n", game.get_time_left()));
         game.draw_words();
 
         // Print input prompt
@@ -70,7 +74,7 @@ fn main() {
     let game_result_str = if game.get_game_state() == GameState::Lose {
         "YOU LOSE!\n"
     } else {
-        "TIME OVER!\n"
+        "YOU WIN!\n"
     };
 
     addstr(game_result_str);

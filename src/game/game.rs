@@ -13,8 +13,6 @@ pub struct Game {
     score: i32,
     words: VecDeque<Word>,
     last_spawn_time: Instant,
-    time_limit: Duration,
-    elapsed_time: Duration,
     speed_factor: f32,
     height: i32,
     width: i32,
@@ -31,8 +29,6 @@ impl Game {
             score: 0,
             words: VecDeque::new(),
             last_spawn_time: Instant::now(),
-            time_limit: Duration::from_secs(60),
-            elapsed_time: Duration::default(),
             speed_factor: 0.0,
             height: height,
             width: width,
@@ -44,7 +40,7 @@ impl Game {
         }
     }
 
-    pub fn update(&mut self, input: Option<char>) {
+    pub fn update(&mut self, input: Option<char>) -> GameState {
         if self.last_spawn_time.elapsed() > Duration::from_secs(2) {
             self.spawn_word();
             self.last_spawn_time = Instant::now();
@@ -55,7 +51,7 @@ impl Game {
             self.attack_string = self.vocab_generator.generate();
         }
 
-        if input.is_some() && input.unwrap() != '\n' {
+        if input.is_some() && input.unwrap() != '\n' && input.unwrap() != '=' {
             self.input_string.push(input.unwrap());
         }
 
@@ -71,19 +67,17 @@ impl Game {
             }
         }
 
-        if self.elapsed_time >= self.time_limit {
-            self.game_state = GameState::TimeOver;
-        }
-
         if self.life <= 0 {
             self.game_state = GameState::Lose;
+        } else {
+            self.game_state = GameState::InProgress;
         }
 
-        self.elapsed_time += Duration::from_millis(100);
         self.speed_factor = 0.1 + self.score as f32 / 1000.0;
+        self.game_state
     }
 
-    fn spawn_word(&mut self) {
+    pub fn spawn_word(&mut self) {
         let mut rng = rand::thread_rng();
         let word_text = self.vocab_generator.generate();
         let word_x = rng.gen_range(0.0, self.width as f32 - word_text.len() as f32) as f32;
@@ -111,10 +105,6 @@ impl Game {
         self.score
     }
 
-    pub fn get_time_left(&self) -> f32 {
-        (self.time_limit - self.elapsed_time).as_secs_f32()
-    }
-
     pub fn get_input_string(&self) -> String {
         self.input_string.clone()
     }
@@ -135,21 +125,22 @@ impl Game {
         self.input_string.pop();
     }
 
-    pub fn enter_input_string(&mut self) {
+    pub fn enter_input_string(&mut self) -> GameState {
         for i in (0..self.words.len()).rev() {
             let word = &mut self.words[i];
-            if self.input_string == word.get_text().clone() {
+            if self.input_string.trim() == word.get_text().clone() {
                 self.score += word.get_text().len() as i32;
                 self.words.remove(i);
-                self.game_state = GameState::Complete;
+                self.game_state = GameState::CompleteWord;
                 break;
             }
         }
         if self.input_string == self.attack_string {
             self.score += self.attack_string.len() as i32;
             self.attack_string = self.vocab_generator.generate();
-            self.game_state = GameState::CompleteAttack;
+            self.game_state = GameState::CompleteAttackWord;
         }
         self.input_string = String::new();
+        self.game_state
     }
 }
