@@ -89,6 +89,7 @@ async fn spawn_manager(
                                 mgr_writer.send(srv_msg).await.unwrap();   // 게임에게 서버 메세지 전달
                             }
                             Message::GameOver => {
+                                mgr_writer.send(srv_msg).await.unwrap();   // 게임에게 서버 메세지 전달
                                 break;
                             }
                             _ => {} // 위 메세지 외에는 무시
