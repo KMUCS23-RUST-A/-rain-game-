@@ -11,7 +11,6 @@ use super::word::Word;
 
 const WIDTH: i32 = 80;
 const HEIGHT: i32 = 24;
-const MAX_WORDS: usize = 5;
 
 pub struct Game {
     score: i32,
@@ -123,6 +122,10 @@ impl Game {
 
     pub fn get_game_state(&self) -> GameState {
         self.game_state
+    }
+
+    pub fn set_game_state(&mut self, game_state: GameState) {
+        self.game_state = game_state;
     }
 
     pub fn pop_input_string(&mut self) {
