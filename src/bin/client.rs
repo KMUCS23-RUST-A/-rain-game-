@@ -1,10 +1,11 @@
-use raingame::{Game, Message};
 use raingame::GameState;
+use raingame::{Game, Message};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
-    sync::mpsc::{self, error::TryRecvError, Receiver, Sender}, task::yield_now,
+    sync::mpsc::{self, error::TryRecvError, Receiver, Sender},
+    task::yield_now,
 };
 
 use ncurses::*;
@@ -12,13 +13,17 @@ use ncurses::*;
 const HEIGHT: i32 = 20;
 const WIDTH: i32 = 80;
 
+const DEBUG: bool = false;
+
 #[tokio::main]
 async fn main() {
     // 서버 TCP 연결
     let mut socket = tokio::net::TcpStream::connect("127.0.0.1:12345")
         .await
         .expect("Server should be running");
-    println!("[Client] Connected to server");
+    if DEBUG {
+        println!("[Client] Connected to server");
+    }
 
     // 채널 생성`
     let (mgr_writer, mgr_reader) = mpsc::channel::<Message>(10);
@@ -31,7 +36,9 @@ async fn main() {
         match nbytes {
             Ok(_) => {
                 let msg = Message::from(buf[0]);
-                println!("[Client] GOT message from server: {:?}", msg);
+                if DEBUG {
+                    println!("[Client] GOT message from server: {:?}", msg);
+                }
                 match msg {
                     Message::Waiting => {
                         continue;
@@ -43,7 +50,9 @@ async fn main() {
                 }
             }
             Err(_) => {
-                println!("[Client] Server disconnected before game start");
+                if DEBUG {
+                    println!("[Client] Server disconnected before game start");
+                }
                 return;
             }
         }
@@ -63,7 +72,9 @@ async fn main() {
     mgr_handle.await.unwrap();
     game_handle.await.unwrap();
 
-    println!("[Client] main exited");
+    if DEBUG {
+        println!("[Client] main exited");
+    }
 }
 
 // GameManager 쓰레드
@@ -84,7 +95,7 @@ async fn spawn_manager(
                 match nbytes {
                     Ok(_) => {
                         let srv_msg = Message::from(buf[0]);
-                        println!("[GameManager] GOT message from server: {:?}", srv_msg);
+                        if DEBUG { println!("[GameManager] GOT message from server: {:?}", srv_msg); }
                         match srv_msg {
                             Message::Attacked => {
                                 mgr_writer.send(srv_msg).await.unwrap();   // 게임에게 서버 메세지 전달
@@ -97,7 +108,7 @@ async fn spawn_manager(
                         }
                     }
                     Err(_) => {
-                        println!("[GameManager] Server disconnected");
+                        if DEBUG { println!("[GameManager] Server disconnected"); }
                         break;
                     }
                 }
@@ -108,7 +119,7 @@ async fn spawn_manager(
             msg = game_reader.recv() => {
                 match msg {
                     Some(msg) => {
-                        println!("[GameManager] GOT message from game: {:?}", msg);
+                        if DEBUG { println!("[GameManager] GOT message from game: {:?}", msg); }
                         match msg {
                             Message::Attacked => {
                                 socket.write_all(&[msg as u8]).await.unwrap();
@@ -121,7 +132,7 @@ async fn spawn_manager(
                         }
                     }
                     None => {
-                        println!("[GameManager] Game channel closed");
+                        if DEBUG { println!("[GameManager] Game channel closed"); }
                         break;  // GameManager 종료
                     }
                 }
@@ -134,7 +145,9 @@ async fn spawn_manager(
     while let Some(_) = game_reader.recv().await {}
 
     socket.shutdown().await.unwrap();
-    println!("[GameManager] Closed");
+    if DEBUG {
+        println!("[GameManager] Closed");
+    }
 }
 
 // 게임 쓰레드
@@ -153,7 +166,9 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
         // GameManager로부터 메세지 non-blocking으로 받기
         match mgr_reader.try_recv() {
             Ok(msg) => {
-                println!("[Game] GOT message from manager: {:?}", msg);
+                if DEBUG {
+                    println!("[Game] GOT message from manager: {:?}", msg);
+                }
                 match msg {
                     Message::GameOver => {
                         game.set_game_state(GameState::Win);
@@ -167,7 +182,9 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
             }
             Err(TryRecvError::Empty) => {} // 읽을 메세지 없음
             Err(TryRecvError::Disconnected) => {
-                println!("[Game] Manager channel closed");
+                if DEBUG {
+                    println!("[Game] Manager channel closed");
+                }
                 break;
             }
         }
@@ -199,10 +216,14 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
             yield_now().await;
             match result {
                 Ok(()) => {
-                    println!("[Game] Sent message to manager: {:?}", Message::Attacked);
+                    if DEBUG {
+                        println!("[Game] Sent message to manager: {:?}", Message::Attacked);
+                    }
                 }
                 Err(e) => {
-                    println!("[Game] Failed to send message to manager: {:?}", e);
+                    if DEBUG {
+                        println!("[Game] Failed to send message to manager: {:?}", e);
+                    }
                 }
             }
         }
@@ -214,10 +235,14 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
             yield_now().await;
             match result {
                 Ok(()) => {
-                    println!("[Game] Sent message to manager: {:?}", Message::GameOver);
+                    if DEBUG {
+                        println!("[Game] Sent message to manager: {:?}", Message::GameOver);
+                    }
                 }
                 Err(e) => {
-                    println!("[Game] Failed to send message to manager: {:?}", e);
+                    if DEBUG {
+                        println!("[Game] Failed to send message to manager: {:?}", e);
+                    }
                 }
             }
             break;
@@ -246,6 +271,7 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
         _ => "ERROR\n",
     };
 
+    erase();
     addstr(game_result);
     addstr(&format!("Final Score: {}\n", game.get_score()));
     refresh();
@@ -267,5 +293,7 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
     mgr_reader.close();
     while let Some(_) = mgr_reader.recv().await {}
 
-    println!("[Game] Closed");
+    if DEBUG {
+        println!("[Game] Closed");
+    }
 }
