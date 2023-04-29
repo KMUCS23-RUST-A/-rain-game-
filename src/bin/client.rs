@@ -1,4 +1,5 @@
 use raingame::{Game, Message};
+use raingame::GameState;
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -138,7 +139,6 @@ async fn spawn_manager(
 
 // 게임 쓰레드
 async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Message>) {
-    // run game
     initscr();
     cbreak();
     timeout(0);
@@ -147,6 +147,7 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
 
     let mut game = Game::new(HEIGHT, WIDTH);
     let line = "-".repeat(WIDTH as usize);
+    let mut game_state = GameState::StartGame;
 
     loop {
         // GameManager로부터 메세지 non-blocking으로 받기
@@ -155,10 +156,11 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
                 println!("[Game] GOT message from manager: {:?}", msg);
                 match msg {
                     Message::GameOver => {
+                        game.set_game_state(GameState::Win);
                         break;
                     }
                     Message::Attacked => {
-                        // TODO: 공격 단어 수신 시 처리
+                        game.spawn_word();
                     }
                     _ => {} // 위 메세지 타입 외에는 무시
                 }
@@ -170,28 +172,31 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
             }
         }
 
-        let input = getch();
-
-        if input == KEY_F1 || game.is_game_over() {
-            break;
-        }
-        if input == KEY_BACKSPACE {
-            game.backspace();
-        }
         erase();
-
+        let input = getch();
         let input_char = if (input >= 0) && (input <= 255) {
             char::from_u32(input as u32)
         } else {
             None
         };
 
-        // TODO: 업데이트 및 단어 완성에 대한 이벤트 매니저에게 전송 (channel)
+        if input_char.is_some() {
+            if input == KEY_BACKSPACE
+                || input == KEY_DC
+                || input == 127
+                || input_char.unwrap() == '\u{0008}'
+                || input_char.unwrap() == '='
+            {
+                game.pop_input_string();
+            }
+            if input == KEY_ENTER || input == KEY_SEND || input_char.unwrap() == '\n' {
+                game_state = game.enter_input_string();
+            }
+        }
 
-        let word_completed = game.update(input_char);
-        if word_completed {
-            // Game에서 GameManager로 메세지 전달
+        if game_state == GameState::CompleteAttackWord {
             let result = game_writer.send(Message::Attacked).await;
+            yield_now().await;
             match result {
                 Ok(()) => {
                     println!("[Game] Sent message to manager: {:?}", Message::Attacked);
@@ -202,13 +207,32 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
             }
         }
 
+        game_state = game.update(input_char); // game_state = InProgress or Lose
+
+        if game_state == GameState::Lose {
+            let result = game_writer.send(Message::GameOver).await;
+            yield_now().await;
+            match result {
+                Ok(()) => {
+                    println!("[Game] Sent message to manager: {:?}", Message::GameOver);
+                }
+                Err(e) => {
+                    println!("[Game] Failed to send message to manager: {:?}", e);
+                }
+            }
+            break;
+        };
+
         addstr(&format!("Score: {}\n", game.get_score()));
-        addstr(&format!("Time left: {:.1}s\n", game.get_time_left()));
         game.draw_words();
 
         // Print input prompt
         let input_prompt = format!("> {}", game.get_input_string());
+        let life_string = format!("LIFE: {}", game.get_life());
+        let attack_string = format!("ATTACK: {}", game.get_attack_string());
 
+        mvprintw(0, WIDTH - life_string.len() as i32, &life_string);
+        mvprintw(1, WIDTH - attack_string.len() as i32, &attack_string);
         mvprintw(HEIGHT - 2, 0, &line);
         mvprintw(HEIGHT - 1, 0, input_prompt.as_str());
         refresh();
@@ -216,23 +240,30 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
         napms(100);
     }
 
+    let game_result = match game.get_game_state() {
+        GameState::Lose => "YOU LOSE!\n",
+        GameState::Win => "YOU WIN!\n",
+        _ => "ERROR\n",
+    };
+
+    addstr(game_result);
     addstr(&format!("Final Score: {}\n", game.get_score()));
+    refresh();
+
+    napms(1000);
     addstr("Press any key to exit...");
     refresh();
-    getch();
+
+    loop {
+        let input = getch();
+        if input > -1 {
+            break;
+        }
+        napms(100);
+    }
     endwin();
 
     // Teardown
-    match game_writer.send(Message::GameOver).await {
-        Ok(()) => {
-            println!("[Game] Sent message to manager: {:?}", Message::GameOver);
-        }
-        Err(e) => {
-            // 상대가 먼저 GameOver를 호출하여 channel이 닫힌 경우
-            println!("[Game] manager channel already closed: {:?}", e);
-        }
-    }
-
     mgr_reader.close();
     while let Some(_) = mgr_reader.recv().await {}
 
