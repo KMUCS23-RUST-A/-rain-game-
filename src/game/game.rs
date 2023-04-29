@@ -5,9 +5,9 @@ use rand::Rng;
 
 use ncurses::*;
 
-use super::game_state::GameState;
 use super::vocab::VocabGenerator;
 use super::word::Word;
+use crate::GameState;
 
 const WIDTH: i32 = 80;
 const HEIGHT: i32 = 24;
