@@ -1,5 +1,5 @@
 [package]
-name = "avoid_rain"
+name = "raingame"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,3 +9,4 @@ edition = "2021"
 rand = "0.6.5"
 crossterm = "0.17.7"
 ncurses = "5.99"
+tokio = { version = "1.28.0", features = ["full"] }
