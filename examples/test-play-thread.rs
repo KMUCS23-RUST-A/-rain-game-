@@ -43,32 +43,18 @@ async fn main() {
                         println!("game over");
                     }
                 }
-                mgr_writer.send(srv_msg).await.unwrap();
+                game_writer.send(srv_msg).await.unwrap();   // 게임에게 서버 메세지 전달
             }
 
             // got message from game
             msg = game_reader.recv() => {
                 println!("GOT GAME MESSAGE: {:?}", msg);
+                let msg = msg.unwrap();
                 match msg {
-                    Some(msg) => match msg {
-                        Message::Waiting => {
-                            let message = Message::Waiting as u8;
-                            socket.write_all(&[message]).await.unwrap();
+                    Message::Attacked | Message::GameOver => {
+                        socket.write_all(&[msg as u8]).await.unwrap();  // 서버에게 게임 메세지 전달
                         }
-                        Message::GameStart => {
-                            let message = Message::GameStart as u8;
-                            socket.write_all(&[message]).await.unwrap();
-                        }
-                        Message::GameOver => {
-                            let message = Message::GameOver as u8;
-                            socket.write_all(&[message]).await.unwrap();
-                        }
-                        Message::Attacked => {
-                            let message = Message::Attacked as u8;
-                            socket.write_all(&[message]).await.unwrap();
-                        }
-                    },
-                    None => {}
+                    _ => {} // 위 메세지 외에는 무시
                 }
             }
         }
@@ -119,7 +105,7 @@ async fn main() {
             };
             let word_completed = game.update(input_char);
             if word_completed {
-                game_writer.send(Message::Attacked).await.unwrap();
+                mgr_writer.send(Message::Attacked).await.unwrap();  // GameManager에게 게임 메세지 전달
             }
 
             addstr(&format!("Score: {}\n", game.get_score()));
