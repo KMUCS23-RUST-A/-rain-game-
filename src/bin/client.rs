@@ -20,7 +20,7 @@ const DEBUG: bool = true;
 #[derive(Parser, Debug)]
 struct Opts {
     // Address of the server to connect to
-    #[arg(short='a', long, default_value = "127.0.0.1")]
+    #[arg(short='a', long, default_value = "0.0.0.0")]
     host: String,
 
     // Port of the server to connect to
@@ -171,6 +171,7 @@ async fn spawn_manager(
 async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Message>) {
     initscr();
     cbreak();
+    noecho();
     timeout(0);
     curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
     keypad(stdscr(), true);
@@ -215,6 +216,9 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
         };
 
         if input_char.is_some() {
+            println!("b{}b", input);
+            println!("{}", input == 127);
+            println!("a{}a", input_char.unwrap());
             if input == KEY_BACKSPACE
                 || input == KEY_DC
                 || input == 127
