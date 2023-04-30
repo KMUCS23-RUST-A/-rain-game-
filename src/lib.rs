@@ -1,6 +1,5 @@
 mod enums;
 mod game;
 
-pub use enums::Message;
+pub use enums::{GameState, Message, WordColor};
 pub use game::game::{play, Game};
-pub use game::game_state::GameState;
