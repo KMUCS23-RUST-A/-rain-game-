@@ -154,6 +154,7 @@ async fn spawn_manager(
 async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Message>) {
     initscr();
     cbreak();
+    noecho();
     timeout(0);
     curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
     keypad(stdscr(), true);
