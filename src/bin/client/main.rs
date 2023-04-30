@@ -1,5 +1,5 @@
-use raingame::GameState;
 use raingame::{Game, Message};
+use raingame::{GameState, WordColor};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -161,9 +161,9 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
     // Color 세팅
     start_color();
     use_default_colors();
-    ncurses::init_pair(1, ncurses::COLOR_RED, -1);
-    ncurses::init_pair(2, ncurses::COLOR_GREEN, -1);
-    ncurses::init_pair(3, ncurses::COLOR_YELLOW, -1);
+    ncurses::init_pair(WordColor::Red as i16, ncurses::COLOR_RED, -1);
+    ncurses::init_pair(WordColor::Green as i16, ncurses::COLOR_GREEN, -1);
+    ncurses::init_pair(WordColor::Yellow as i16, ncurses::COLOR_YELLOW, -1);
 
     let mut game = Game::new(HEIGHT, WIDTH);
     let line = "-".repeat(WIDTH as usize);
@@ -182,7 +182,7 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
                         break;
                     }
                     Message::Attacked => {
-                        game.spawn_word();
+                        game.spawn_word(WordColor::Red);
                     }
                     _ => {} // 위 메세지 타입 외에는 무시
                 }
@@ -263,15 +263,15 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
         let life_string = format!("LIFE: {}", game.get_life());
         let attack_string = format!("ATTACK: {}", game.get_attack_string());
 
-        attron(COLOR_PAIR(2));
+        attron(COLOR_PAIR(WordColor::Green as i16));
         mvprintw(0, WIDTH - life_string.len() as i32, &life_string);
         attroff(COLOR_PAIR(2));
 
-        attron(COLOR_PAIR(1));
+        attron(COLOR_PAIR(WordColor::Red as i16));
         mvprintw(1, WIDTH - attack_string.len() as i32, &attack_string);
         attroff(COLOR_PAIR(1));
 
-        attron(COLOR_PAIR(3));
+        attron(COLOR_PAIR(WordColor::Yellow as i16));
         mvprintw(HEIGHT - 2, 0, &line);
         attroff(COLOR_PAIR(3));
 

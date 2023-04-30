@@ -7,7 +7,7 @@ use ncurses::*;
 
 use super::vocab::VocabGenerator;
 use super::word::Word;
-use crate::GameState;
+use crate::{GameState, WordColor};
 
 const WIDTH: i32 = 80;
 const HEIGHT: i32 = 24;
@@ -41,13 +41,13 @@ impl Game {
             life: 5,
             game_state: GameState::StartGame,
             attack_string: String::new(),
-            latest_spawned_word: Word::new(0.0, 0.0, String::new()),
+            latest_spawned_word: Word::new(0.0, 0.0, String::new(), crate::WordColor::White),
         }
     }
 
     pub fn update(&mut self, input: Option<char>) -> GameState {
         if self.last_spawn_time.elapsed() > Duration::from_secs(2) {
-            self.spawn_word();
+            self.spawn_word(WordColor::White);
             self.last_spawn_time = Instant::now();
         }
         self.move_words();
@@ -84,7 +84,7 @@ impl Game {
         self.game_state
     }
 
-    pub fn spawn_word(&mut self) {
+    pub fn spawn_word(&mut self, color: WordColor) {
         let mut rng = rand::thread_rng();
         let word_text = self.vocab_generator.generate();
         let mut word_x = rng.gen_range(0.0, self.width as f32 - word_text.len() as f32) as f32;
@@ -104,8 +104,8 @@ impl Game {
         }
         let word_y = 0.0;
         self.words
-            .push_back(Word::new(word_x, word_y, word_text.clone()));
-        self.latest_spawned_word = Word::new(word_x, word_y, word_text.clone());
+            .push_back(Word::new(word_x, word_y, word_text.clone(), color));
+        self.latest_spawned_word = Word::new(word_x, word_y, word_text.clone(), WordColor::White);
     }
 
     pub fn move_words(&mut self) {
@@ -116,11 +116,14 @@ impl Game {
 
     pub fn draw_words(&self) {
         for word in &self.words {
+            let color = word.get_color() as i16;
+            attron(COLOR_PAIR(color));
             mvprintw(
                 word.get_y() as i32,
                 word.get_x() as i32,
                 word.get_text().as_str(),
             );
+            attroff(COLOR_PAIR(color));
         }
     }
 
@@ -202,7 +205,7 @@ pub fn play() {
                 game.pop_input_string();
             }
             if input == KEY_ENTER || input == KEY_SEND || input_char.unwrap() == '\n' {
-                game_state = game.enter_input_string();
+                _ = game.enter_input_string();
             }
         }
 
