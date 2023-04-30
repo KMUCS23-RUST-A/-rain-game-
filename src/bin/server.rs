@@ -23,7 +23,7 @@ async fn main() {
     ];
 
     // 서버 소켓 생성
-    let listener = TcpListener::bind("127.0.0.1:12345").await.unwrap();
+    let listener = TcpListener::bind("0.0.0.0:12345").await.unwrap();
 
     // 클라이언트 접속 대기
     for _ in 0..MAX_CLIENTS {
