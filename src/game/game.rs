@@ -57,8 +57,10 @@ impl Game {
             self.attack_string = self.vocab_generator.generate();
         }
 
-        if input.is_some() && input.unwrap() != '\n' && input.unwrap() != '=' {
-            self.input_string.push(input.unwrap());
+        if let Some(input_char) = input {
+            if !matches!(input_char, '\n' | '=' | '\x7F') {
+                self.input_string.push(input_char);
+            }
         }
 
         // 각 단어 별로 Deadline을 넘었는지 판정
