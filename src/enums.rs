@@ -1,3 +1,22 @@
+#[derive(Clone, Copy)]
+pub enum WordColor {
+    White = 0,
+    Black = 1,
+    Yellow = 2,
+    Red = 3,
+    Green = 4,
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum GameState {
+    StartGame = 0,
+    CompleteWord = 1,
+    CompleteAttackWord = 2,
+    Lose = 3,
+    InProgress = 4,
+    Win = 5,
+}
+
 #[derive(Debug)]
 pub enum Message {
     Waiting = 0,
