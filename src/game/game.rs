@@ -52,6 +52,7 @@ impl Game {
         }
         self.move_words();
 
+        // 공격 단어 갱신
         if self.attack_string.is_empty() {
             self.attack_string = self.vocab_generator.generate();
         }
@@ -60,25 +61,26 @@ impl Game {
             self.input_string.push(input.unwrap());
         }
 
+        // 각 단어 별로 Deadline을 넘었는지 판정
+        let line_height = (self.height - 2) as f32;
         for i in (0..self.words.len()).rev() {
             let word = &mut self.words[i];
             word.set_y(word.get_y() + self.speed_factor);
 
-            let line = (self.height - 2) as f32;
-            if word.get_y() >= line {
+            if word.get_y() >= line_height {
                 self.score -= word.get_text().len() as i32;
                 self.words.remove(i);
                 self.life -= 1;
             }
         }
 
-        if self.life <= 0 {
-            self.game_state = GameState::Lose;
+        self.speed_factor = 0.1 + (self.score as f32) / 1000.0;
+        self.game_state = if self.life <= 0 {
+            GameState::Lose
         } else {
-            self.game_state = GameState::InProgress;
-        }
+            GameState::InProgress
+        };
 
-        self.speed_factor = 0.1 + self.score as f32 / 1000.0;
         self.game_state
     }
 
