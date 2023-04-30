@@ -184,7 +184,6 @@ pub fn play() {
 
     let mut game = Game::new(HEIGHT, WIDTH);
     let line = "-".repeat(WIDTH as usize);
-    let mut game_state = GameState::StartGame;
 
     loop {
         erase();
@@ -209,7 +208,7 @@ pub fn play() {
             }
         }
 
-        game_state = game.update(input_char); // game_state = InProgress or Lose
+        let game_state = game.update(input_char); // game_state = InProgress or Lose
 
         if game_state == GameState::Lose {
             break;
