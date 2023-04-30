@@ -24,7 +24,6 @@ pub struct Game {
     life: i32,
     game_state: GameState,
     attack_string: String,
-    latest_spawned_word: Word,
 }
 
 impl Game {
@@ -41,7 +40,6 @@ impl Game {
             life: 5,
             game_state: GameState::StartGame,
             attack_string: String::new(),
-            latest_spawned_word: Word::new(0.0, 0.0, String::new()),
         }
     }
 
@@ -85,25 +83,9 @@ impl Game {
     pub fn spawn_word(&mut self) {
         let mut rng = rand::thread_rng();
         let word_text = self.vocab_generator.generate();
-        let mut word_x = rng.gen_range(0.0, self.width as f32 - word_text.len() as f32) as f32;
-        let latest_x_min = self.latest_spawned_word.get_x() - 1.0;
-        let latest_x_max = self.latest_spawned_word.get_x()
-            + self.latest_spawned_word.get_text().len() as f32
-            + 1.0;
-        loop {
-            if (latest_x_min < word_x && word_x < latest_x_max)
-                || (latest_x_min < (word_x + word_text.len() as f32)
-                    && (word_x + word_text.len() as f32) < latest_x_max)
-            {
-                word_x = rng.gen_range(0.0, self.width as f32 - word_text.len() as f32) as f32;
-            } else {
-                break;
-            }
-        }
+        let word_x = rng.gen_range(0.0, self.width as f32 - word_text.len() as f32) as f32;
         let word_y = 0.0;
-        self.words
-            .push_back(Word::new(word_x, word_y, word_text.clone()));
-        self.latest_spawned_word = Word::new(word_x, word_y, word_text.clone());
+        self.words.push_back(Word::new(word_x, word_y, word_text));
     }
 
     pub fn move_words(&mut self) {
@@ -203,6 +185,13 @@ pub fn play() {
                 game_state = game.enter_input_string();
             }
         }
+
+        if game_state == GameState::CompleteAttackWord {
+            // TODO
+        }
+        // if Attacked {
+        //     game.spawn_word()
+        // }
 
         game_state = game.update(input_char); // game_state = InProgress or Lose
 
