@@ -1,3 +1,5 @@
+use clap::Parser;
+
 use raingame::GameState;
 use raingame::{Game, Message};
 
@@ -13,12 +15,27 @@ use ncurses::*;
 const HEIGHT: i32 = 20;
 const WIDTH: i32 = 80;
 
-const DEBUG: bool = false;
+const DEBUG: bool = true;
+
+#[derive(Parser, Debug)]
+struct Opts {
+    // Address of the server to connect to
+    #[arg(short='a', long, default_value = "127.0.0.1")]
+    host: String,
+
+    // Port of the server to connect to
+    #[arg(short, long, default_value = "22345")]
+    port: String,
+}
 
 #[tokio::main]
 async fn main() {
+    // 커맨드라인 파싱
+    let opts = Opts::parse();
+    let addr = format!("{}:{}", opts.host, opts.port);
+
     // 서버 TCP 연결
-    let mut socket = tokio::net::TcpStream::connect("127.0.0.1:12345")
+    let mut socket = tokio::net::TcpStream::connect(addr)
         .await
         .expect("Server should be running");
     if DEBUG {
