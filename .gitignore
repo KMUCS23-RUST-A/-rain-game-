@@ -16,3 +16,6 @@ Cargo.lock
 
 # visual studio code
 .vscode*
+
+# log
+log
