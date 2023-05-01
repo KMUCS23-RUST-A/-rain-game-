@@ -5,9 +5,9 @@ use rand::Rng;
 
 use ncurses::*;
 
-use super::game_state::GameState;
 use super::vocab::VocabGenerator;
 use super::word::Word;
+use crate::{GameState, WordColor};
 
 const WIDTH: i32 = 80;
 const HEIGHT: i32 = 24;
@@ -24,6 +24,7 @@ pub struct Game {
     life: i32,
     game_state: GameState,
     attack_string: String,
+    latest_spawned_word: Word,
 }
 
 impl Game {
@@ -40,52 +41,73 @@ impl Game {
             life: 5,
             game_state: GameState::StartGame,
             attack_string: String::new(),
+            latest_spawned_word: Word::new(0.0, 0.0, String::new(), crate::WordColor::White),
         }
     }
 
-    pub fn update(&mut self, input: Option<char>) -> GameState {
+    pub fn update(&mut self) -> GameState {
         if self.last_spawn_time.elapsed() > Duration::from_secs(2) {
-            self.spawn_word();
+            self.spawn_word(WordColor::White);
             self.last_spawn_time = Instant::now();
         }
         self.move_words();
 
+        // 공격 단어 갱신
         if self.attack_string.is_empty() {
             self.attack_string = self.vocab_generator.generate();
         }
 
-        if input.is_some() && input.unwrap() != '\n' && input.unwrap() != '=' {
-            self.input_string.push(input.unwrap());
-        }
+        // if let Some(input_char) = input {
+        //     if !matches!(input_char, '\n' | '=' | '\x7F') && input_char as i32 != KEY_BACKSPACE {
+        //         self.input_string.push(input_char);
+        //     }
+        // }
 
+        // 각 단어 별로 Deadline을 넘었는지 판정
+        let line_height = (self.height - 2) as f32;
         for i in (0..self.words.len()).rev() {
             let word = &mut self.words[i];
             word.set_y(word.get_y() + self.speed_factor);
 
-            let line = (self.height - 2) as f32;
-            if word.get_y() >= line {
+            if word.get_y() >= line_height {
                 self.score -= word.get_text().len() as i32;
                 self.words.remove(i);
                 self.life -= 1;
             }
         }
 
-        if self.life <= 0 {
-            self.game_state = GameState::Lose;
+        self.speed_factor = 0.1 + (self.score as f32) / 1000.0;
+        self.game_state = if self.life <= 0 {
+            GameState::Lose
         } else {
-            self.game_state = GameState::InProgress;
-        }
+            GameState::InProgress
+        };
 
-        self.speed_factor = 0.1 + self.score as f32 / 1000.0;
         self.game_state
     }
 
-    pub fn spawn_word(&mut self) {
+    pub fn spawn_word(&mut self, color: WordColor) {
         let mut rng = rand::thread_rng();
         let word_text = self.vocab_generator.generate();
-        let word_x = rng.gen_range(0.0, self.width as f32 - word_text.len() as f32) as f32;
+        let mut word_x = rng.gen_range(0.0, self.width as f32 - word_text.len() as f32) as f32;
+        let latest_x_min = self.latest_spawned_word.get_x() - 1.0;
+        let latest_x_max = self.latest_spawned_word.get_x()
+            + self.latest_spawned_word.get_text().len() as f32
+            + 1.0;
+        loop {
+            if (latest_x_min < word_x && word_x < latest_x_max)
+                || (latest_x_min < (word_x + word_text.len() as f32)
+                    && (word_x + word_text.len() as f32) < latest_x_max)
+            {
+                word_x = rng.gen_range(0.0, self.width as f32 - word_text.len() as f32) as f32;
+            } else {
+                break;
+            }
+        }
         let word_y = 0.0;
-        self.words.push_back(Word::new(word_x, word_y, word_text));
+        self.words
+            .push_back(Word::new(word_x, word_y, word_text.clone(), color));
+        self.latest_spawned_word = Word::new(word_x, word_y, word_text.clone(), WordColor::White);
     }
 
     pub fn move_words(&mut self) {
@@ -96,11 +118,14 @@ impl Game {
 
     pub fn draw_words(&self) {
         for word in &self.words {
+            let color = word.get_color() as i16;
+            attron(COLOR_PAIR(color));
             mvprintw(
                 word.get_y() as i32,
                 word.get_x() as i32,
                 word.get_text().as_str(),
             );
+            attroff(COLOR_PAIR(color));
         }
     }
 
@@ -110,6 +135,10 @@ impl Game {
 
     pub fn get_input_string(&self) -> String {
         self.input_string.clone()
+    }
+
+    pub fn push_input_string(&mut self, input_char: char) {
+        self.input_string.push(input_char);
     }
 
     pub fn get_attack_string(&self) -> String {
@@ -161,7 +190,6 @@ pub fn play() {
 
     let mut game = Game::new(HEIGHT, WIDTH);
     let line = "-".repeat(WIDTH as usize);
-    let mut game_state = GameState::StartGame;
 
     loop {
         erase();
@@ -182,18 +210,11 @@ pub fn play() {
                 game.pop_input_string();
             }
             if input == KEY_ENTER || input == KEY_SEND || input_char.unwrap() == '\n' {
-                game_state = game.enter_input_string();
+                _ = game.enter_input_string();
             }
         }
 
-        if game_state == GameState::CompleteAttackWord {
-            // TODO
-        }
-        // if Attacked {
-        //     game.spawn_word()
-        // }
-
-        game_state = game.update(input_char); // game_state = InProgress or Lose
+        let game_state = game.update(); // game_state = InProgress or Lose
 
         if game_state == GameState::Lose {
             break;
