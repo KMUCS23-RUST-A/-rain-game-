@@ -178,7 +178,8 @@ async fn spawn_manager(
         println!("[GameManager] Closed");
     }
 }
-fn write_game_result(result_string: &str) -> Result<()> {
+
+fn write_game_result(result_string: &str) {
     let now = Utc::now();
     let filename = format!("./log/{}.log", now.format("%Y-%m-%d_%H-%M-%S"));
 
@@ -187,11 +188,10 @@ fn write_game_result(result_string: &str) -> Result<()> {
         fs::create_dir(path).expect("Failed to create log directory");
     }
 
-    let mut file = File::create(&filename)?;
-    file.write_all(result_string.as_bytes())?;
-
-    Ok(())
+    let mut file = File::create(&filename).unwrap();
+    file.write_all(result_string.as_bytes()).unwrap();
 }
+
 // 게임 쓰레드
 async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Message>) {
     initscr();
