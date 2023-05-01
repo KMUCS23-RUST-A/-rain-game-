@@ -10,7 +10,7 @@ impl VocabGenerator {
     pub fn new() -> Self {
         VocabGenerator {
             vocab: {
-                let file = File::open("./src/game/vocab.txt").unwrap();
+                let file = File::open("./vocab.txt").unwrap();
                 let reader = BufReader::new(file);
 
                 let mut vocabs = Vec::<String>::new();

@@ -51,6 +51,20 @@ async fn main() {
         println!("[Client] Connected to server");
     }
 
+    // vocab 받기
+    let mut file = tokio::fs::File::create("./vocab.txt").await.unwrap();
+    
+    let size = socket.read_u32().await.unwrap();
+    let mut contents = vec![0; size as usize];
+    socket.read_exact(&mut contents).await.unwrap();
+    
+    file.write_all(&contents).await.unwrap();
+    file.shutdown().await.unwrap();
+    
+    if DEBUG {
+        println!("[Client] Vocab received");
+    }
+
     // 채널 생성`
     let (mgr_writer, mgr_reader) = mpsc::channel::<Message>(10);
     let (game_writer, game_reader) = mpsc::channel::<Message>(10);
