@@ -45,3 +45,6 @@ Cargo.lock
 
 # log
 log
+
+# root vocab.txt
+/vocab.txt

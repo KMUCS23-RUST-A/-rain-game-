@@ -47,15 +47,26 @@ async fn main() {
 
         // 클라이언트 접속 대기
         println!("[Server] Waiting for clients...");
-        for _ in 0..MAX_CLIENTS {
+        for index in 0..MAX_CLIENTS {
             let (mut socket, _) = listener.accept().await.unwrap(); // 클라이언트 연결 대기
             println!(
                 "[Server] Client connected from {}",
                 socket.peer_addr().unwrap()
             );
 
+            // // vocab 전송
+            let mut file = tokio::fs::File::open("./config/vocab.txt").await.expect("Need ./config/vocab.txt for game");
+            let mut contents = vec![];
+
+            let n = file.read_to_end(&mut contents).await.unwrap();
+            socket.write_u32(n as u32).await.unwrap();
+            
+            socket.write_all(&contents).await.unwrap();
+            println!("[Server] Vocab sent to Client{}", index + 1);
+
             let msg = Message::Waiting;
             socket.write_all(&[msg as u8]).await.unwrap(); // 클라이언트에게 상대방 접속 대기
+            println!("[Server] SENT Message::Waiting to Client{}", index + 1);
 
             // socket 소유권이 clients vector로 이동
             client_sockets.push(socket);
