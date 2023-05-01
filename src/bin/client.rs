@@ -228,11 +228,15 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
                 || input == 127
                 || input_char.unwrap() == '\u{0008}'
                 || input_char.unwrap() == '='
+                || input_char.unwrap() == '\x7f'
             {
                 game.pop_input_string();
             }
-            if input == KEY_ENTER || input == KEY_SEND || input_char.unwrap() == '\n' {
+            else if input == KEY_ENTER || input == KEY_SEND || input_char.unwrap() == '\n' {
                 game_state = game.enter_input_string();
+            }
+            else {
+                game.push_input_string(input_char.unwrap());
             }
         }
 

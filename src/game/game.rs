@@ -57,11 +57,11 @@ impl Game {
             self.attack_string = self.vocab_generator.generate();
         }
 
-        if let Some(input_char) = input {
-            if !matches!(input_char, '\n' | '=' | '\x7F') && input_char as i32 != KEY_BACKSPACE {
-                self.input_string.push(input_char);
-            }
-        }
+        // if let Some(input_char) = input {
+        //     if !matches!(input_char, '\n' | '=' | '\x7F') && input_char as i32 != KEY_BACKSPACE {
+        //         self.input_string.push(input_char);
+        //     }
+        // }
 
         // 각 단어 별로 Deadline을 넘었는지 판정
         let line_height = (self.height - 2) as f32;
@@ -135,6 +135,10 @@ impl Game {
 
     pub fn get_input_string(&self) -> String {
         self.input_string.clone()
+    }
+
+    pub fn push_input_string(&mut self, input_char: char) {
+        self.input_string.push(input_char);
     }
 
     pub fn get_attack_string(&self) -> String {
