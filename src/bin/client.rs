@@ -349,7 +349,7 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
     endwin();
 
     // Teardown
-    let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
+    let listener = TcpListener::bind("0.0.0.0:0").unwrap();
     let port = listener.local_addr().unwrap().port().to_string();
     let score = game.get_score();
     let result_string = format!("{} , with a score of {}", port,score);
