@@ -3,6 +3,15 @@ use clap::Parser;
 use raingame::{Game, Message};
 use raingame::{GameState, WordColor};
 
+use chrono::{Utc};
+use std::fs;
+
+use std::path::Path;
+
+use std::fs::File;
+use std::io::{Write};
+
+
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -167,6 +176,19 @@ async fn spawn_manager(
     }
 }
 
+fn write_game_result(result_string: &str) {
+    let now = Utc::now();
+    let filename = format!("./log/{}.log", now.format("%Y-%m-%d_%H-%M-%S"));
+
+    let path = Path::new("log");
+    if !path.exists() {
+        fs::create_dir(path).expect("Failed to create log directory");
+    }
+
+    let mut file = File::create(&filename).unwrap();
+    file.write_all(result_string.as_bytes()).unwrap();
+}
+
 // 게임 쓰레드
 async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Message>) {
     initscr();
@@ -324,6 +346,9 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
     endwin();
 
     // Teardown
+    let result_string = format!("{} with a score of {}", game_result, game.get_score());
+    write_game_result(&result_string);
+    
     mgr_reader.close();
     while let Some(_) = mgr_reader.recv().await {}
 
