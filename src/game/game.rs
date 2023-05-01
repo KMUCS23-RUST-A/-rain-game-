@@ -58,7 +58,7 @@ impl Game {
         }
 
         if let Some(input_char) = input {
-            if !matches!(input_char, '\n' | '=' | '\x7F') {
+            if !matches!(input_char, '\n' | '=' | '\x7F') || input_char as i32 == KEY_BACKSPACE {
                 self.input_string.push(input_char);
             }
         }
