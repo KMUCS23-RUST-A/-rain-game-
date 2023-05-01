@@ -14,7 +14,7 @@ const MAX_CLIENTS: usize = 2;
 #[derive(Parser, Debug)]
 struct Opts {
     // Address of the server to connect to
-    #[arg(short='a', long, default_value = "0.0.0.0")]
+    #[arg(short = 'a', long, default_value = "0.0.0.0")]
     host: String,
 
     // Port of the server to connect to
@@ -26,56 +26,63 @@ struct Opts {
 async fn main() {
     let opts = Opts::parse();
 
-    let mut client_sockets = Vec::new();
-    let mut client_handler = Vec::new();
+    loop {
+        println!("[Server] Setting up a new game...");
 
-    // 핸들러 채널 생성
-    let (client1_writer, client1_reader) = mpsc::channel::<Message>(8);
-    let (client2_writer, client2_reader) = mpsc::channel::<Message>(8);
+        let mut client_sockets = Vec::new();
+        let mut client_handler = Vec::new();
 
-    let channelsets = vec![
-        (client1_writer, client2_reader),
-        (client2_writer, client1_reader),
-    ];
+        // 핸들러 채널 생성
+        let (client1_writer, client1_reader) = mpsc::channel::<Message>(8);
+        let (client2_writer, client2_reader) = mpsc::channel::<Message>(8);
 
-    // 서버 소켓 생성
-    let addr = format!("{}:{}", opts.host, opts.port);
-    let listener = TcpListener::bind(addr).await.unwrap();
+        let channelsets = vec![
+            (client1_writer, client2_reader),
+            (client2_writer, client1_reader),
+        ];
 
-    // 클라이언트 접속 대기
-    for _ in 0..MAX_CLIENTS {
-        let (mut socket, _) = listener.accept().await.unwrap(); // 클라이언트 연결 대기
-        println!(
-            "[Server] Client connected from {}",
-            socket.peer_addr().unwrap()
-        );
+        // 서버 소켓 생성
+        let addr = format!("{}:{}", opts.host, opts.port);
+        let listener = TcpListener::bind(addr).await.unwrap();
 
-        let msg = Message::Waiting;
-        socket.write_all(&[msg as u8]).await.unwrap(); // 클라이언트에게 상대방 접속 대기
+        // 클라이언트 접속 대기
+        println!("[Server] Waiting for clients...");
+        for _ in 0..MAX_CLIENTS {
+            let (mut socket, _) = listener.accept().await.unwrap(); // 클라이언트 연결 대기
+            println!(
+                "[Server] Client connected from {}",
+                socket.peer_addr().unwrap()
+            );
 
-        // socket 소유권이 clients vector로 이동
-        client_sockets.push(socket);
-    }
+            let msg = Message::Waiting;
+            socket.write_all(&[msg as u8]).await.unwrap(); // 클라이언트에게 상대방 접속 대기
 
-    if client_sockets.len() == MAX_CLIENTS {
-        println!("[Server] All clients connected");
-
-        // 클라이언트 핸들러를 각각의 쓰레드로 분리
-        for (index, (socket, channelset)) in client_sockets
-            .into_iter()
-            .zip(channelsets.into_iter())
-            .enumerate()
-        {
-            let handle = tokio::spawn(async move {
-                handler(socket, index + 1, channelset).await;
-            });
-            client_handler.push(handle);
+            // socket 소유권이 clients vector로 이동
+            client_sockets.push(socket);
         }
 
-        // 클라이언트 핸들러 쓰레드 종료 대기
-        for handler in client_handler {
-            handler.await.unwrap();
+        if client_sockets.len() == MAX_CLIENTS {
+            println!("[Server] All clients connected");
+
+            // 클라이언트 핸들러를 각각의 쓰레드로 분리
+            for (index, (socket, channelset)) in client_sockets
+                .into_iter()
+                .zip(channelsets.into_iter())
+                .enumerate()
+            {
+                let handle = tokio::spawn(async move {
+                    handler(socket, index + 1, channelset).await;
+                });
+                client_handler.push(handle);
+            }
+
+            // 클라이언트 핸들러 쓰레드 종료 대기
+            for handler in client_handler {
+                handler.await.unwrap();
+            }
         }
+
+        println!("[Server] Game Finished!")
     }
 }
 

@@ -324,7 +324,7 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
     let game_result = match game.get_game_state() {
         GameState::Lose => "YOU LOSE!\n",
         GameState::Win => "YOU WIN!\n",
-        _ => "ERROR\n",
+        _ => "Server disconnected!\n",
     };
 
     erase();
