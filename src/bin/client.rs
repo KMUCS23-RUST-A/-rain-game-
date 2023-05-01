@@ -349,21 +349,12 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
     endwin();
 
     // Teardown
-    let game_result = match game.get_game_state() {
-        GameState::Lose => "YOU LOSE!",
-        GameState::Win => "YOU WIN!",
-        _ => "ERROR\n",
-    };
-    let listener = TcpListener::bind("0.0.0.0:0").unwrap();
-    let port = listener.local_addr().unwrap().port().to_string();
-    let score = game.get_score();
-    let result_string = format!("{} ,{} with a score of {}", port,game_result,score);
-    write_game_result(&result_string).unwrap();
+    let result_string = format!("{} with a score of {}", game_result, game.get_score());
+    write_game_result(&result_string);
     mgr_reader.close();
     while let Some(_) = mgr_reader.recv().await {}
 
     if DEBUG {
         println!("[Game] Closed");
     }
-    
 }
