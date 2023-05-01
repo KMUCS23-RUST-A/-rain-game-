@@ -11,4 +11,3 @@ crossterm = "0.17.7"
 ncurses = "5.99"
 tokio = { version = "1.28.0", features = ["full"] }
 clap = { version = "4.2.5", features = ["derive"] }
-chrono = { version = "0.4", features = ["serde"] }
