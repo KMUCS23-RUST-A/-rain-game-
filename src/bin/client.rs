@@ -20,7 +20,7 @@ const DEBUG: bool = true;
 #[derive(Parser, Debug)]
 struct Opts {
     // Address of the server to connect to
-    #[arg(short='a', long, default_value = "0.0.0.0")]
+    #[arg(short = 'a', long, default_value = "0.0.0.0")]
     host: String,
 
     // Port of the server to connect to
@@ -215,25 +215,25 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
         }
 
         erase();
-        let input = getch();
-        let input_char = if (input >= 0) && (input <= 255) {
-            char::from_u32(input as u32)
-        } else {
-            None
-        };
 
-        if input_char.is_some() {
-            if input == KEY_BACKSPACE
-                || input == KEY_DC
-                || input == 127
-                || input_char.unwrap() == '\u{0008}'
-                || input_char.unwrap() == '='
-            {
+        let input = getch();
+        let input_char = char::from_u32(input as u32);
+        match (input, input_char) {
+            (KEY_BACKSPACE, _)
+            | (KEY_DC, _)
+            | (127, _)
+            | (_, Some('\u{0008}'))
+            | (_, Some('='))
+            | (_, Some('\x7f')) => {
                 game.pop_input_string();
             }
-            if input == KEY_ENTER || input == KEY_SEND || input_char.unwrap() == '\n' {
+            (KEY_ENTER, _) | (KEY_SEND, _) | (_, Some('\n')) => {
                 game_state = game.enter_input_string();
             }
+            (_, Some(c)) => {
+                game.push_input_string(c);
+            }
+            _ => {}
         }
 
         if game_state == GameState::CompleteAttackWord {
