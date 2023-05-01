@@ -45,7 +45,7 @@ impl Game {
         }
     }
 
-    pub fn update(&mut self, input: Option<char>) -> GameState {
+    pub fn update(&mut self) -> GameState {
         if self.last_spawn_time.elapsed() > Duration::from_secs(2) {
             self.spawn_word(WordColor::White);
             self.last_spawn_time = Instant::now();
@@ -214,7 +214,7 @@ pub fn play() {
             }
         }
 
-        let game_state = game.update(input_char); // game_state = InProgress or Lose
+        let game_state = game.update(); // game_state = InProgress or Lose
 
         if game_state == GameState::Lose {
             break;

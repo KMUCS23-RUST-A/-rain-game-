@@ -253,7 +253,7 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
             }
         }
 
-        game_state = game.update(input_char); // game_state = InProgress or Lose
+        game_state = game.update(); // game_state = InProgress or Lose
 
         if game_state == GameState::Lose {
             let result = game_writer.send(Message::GameOver).await;
