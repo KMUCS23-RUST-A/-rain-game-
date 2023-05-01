@@ -3,14 +3,13 @@ use clap::Parser;
 use raingame::{Game, Message};
 use raingame::{GameState, WordColor};
 
-use chrono::{Utc, TimeZone};
-use std::net::TcpListener;
+use chrono::{Utc};
 use std::fs;
+
 use std::path::Path;
 
-use std::time::SystemTime;
 use std::fs::File;
-use std::io::{Write, Result};
+use std::io::{Write};
 
 
 use tokio::{
@@ -18,8 +17,6 @@ use tokio::{
     net::TcpStream,
     sync::mpsc::{self, error::TryRecvError, Receiver, Sender},
     task::yield_now,
-    fs::OpenOptions,
-    
 };
 
 use ncurses::*;
@@ -351,6 +348,7 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
     // Teardown
     let result_string = format!("{} with a score of {}", game_result, game.get_score());
     write_game_result(&result_string);
+    
     mgr_reader.close();
     while let Some(_) = mgr_reader.recv().await {}
 
