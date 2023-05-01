@@ -15,7 +15,7 @@ use ncurses::*;
 const HEIGHT: i32 = 20;
 const WIDTH: i32 = 80;
 
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 
 #[derive(Parser, Debug)]
 struct Opts {
