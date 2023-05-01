@@ -223,9 +223,6 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
         };
 
         if input_char.is_some() {
-            println!("b{}b", input);
-            println!("{}", input == 127);
-            println!("a{}a", input_char.unwrap());
             if input == KEY_BACKSPACE
                 || input == KEY_DC
                 || input == 127
