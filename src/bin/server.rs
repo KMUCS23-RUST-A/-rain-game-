@@ -1,15 +1,31 @@
+use clap::Parser;
+
+use raingame::Message;
+
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
     sync::mpsc::{self, Receiver, Sender},
 };
 
-use raingame::Message;
 
 const MAX_CLIENTS: usize = 2;
 
+#[derive(Parser, Debug)]
+struct Opts {
+    // Address of the server to connect to
+    #[arg(short='a', long, default_value = "0.0.0.0")]
+    host: String,
+
+    // Port of the server to connect to
+    #[arg(short, long, default_value = "22345")]
+    port: String,
+}
+
 #[tokio::main]
 async fn main() {
+    let opts = Opts::parse();
+
     let mut client_sockets = Vec::new();
     let mut client_handler = Vec::new();
 
@@ -23,7 +39,8 @@ async fn main() {
     ];
 
     // 서버 소켓 생성
-    let listener = TcpListener::bind("127.0.0.1:12345").await.unwrap();
+    let addr = format!("{}:{}", opts.host, opts.port);
+    let listener = TcpListener::bind(addr).await.unwrap();
 
     // 클라이언트 접속 대기
     for _ in 0..MAX_CLIENTS {
