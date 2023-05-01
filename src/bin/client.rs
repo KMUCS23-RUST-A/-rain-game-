@@ -3,11 +3,23 @@ use clap::Parser;
 use raingame::{Game, Message};
 use raingame::{GameState, WordColor};
 
+use chrono::{Utc, TimeZone};
+use std::net::TcpListener;
+use std::fs;
+use std::path::Path;
+
+use std::time::SystemTime;
+use std::fs::File;
+use std::io::{Write, Result};
+
+
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
     sync::mpsc::{self, error::TryRecvError, Receiver, Sender},
     task::yield_now,
+    fs::OpenOptions,
+    
 };
 
 use ncurses::*;
@@ -166,7 +178,20 @@ async fn spawn_manager(
         println!("[GameManager] Closed");
     }
 }
+fn write_game_result(result_string: &str) -> Result<()> {
+    let now = Utc::now();
+    let filename = format!("./log/{}.log", now.format("%Y-%m-%d_%H-%M-%S"));
 
+    let path = Path::new("log");
+    if !path.exists() {
+        fs::create_dir(path).expect("Failed to create log directory");
+    }
+
+    let mut file = File::create(&filename)?;
+    file.write_all(result_string.as_bytes())?;
+
+    Ok(())
+}
 // 게임 쓰레드
 async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Message>) {
     initscr();
@@ -324,10 +349,16 @@ async fn spawn_game(game_writer: Sender<Message>, mut mgr_reader: Receiver<Messa
     endwin();
 
     // Teardown
+    let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
+    let port = listener.local_addr().unwrap().port().to_string();
+    let score = game.get_score();
+    let result_string = format!("{} , with a score of {}", port,score);
+    write_game_result(&result_string).unwrap();
     mgr_reader.close();
     while let Some(_) = mgr_reader.recv().await {}
 
     if DEBUG {
         println!("[Game] Closed");
     }
+    
 }
