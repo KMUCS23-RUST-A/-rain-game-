@@ -8,12 +8,6 @@ raingame-rs는 1인 또는 2인으로 플레이 가능한 타이핑 게임입니
 
 2인에서 플레이하는 경우, 우측 상단의 ATTACK 단어를 입력하면 상대방에게 추가 단어 비를 내리게 할 수 있습니다!
 
-
-## 요구 사항
-
-- rustc
-- ncurses ^5.98
-
 ## 설치 방법
 - [release binary](https://github.com/KMUCS23-RUST-A/raingame-rs/releases)
 - source code
@@ -26,7 +20,13 @@ raingame-rs는 1인 또는 2인으로 플레이 가능한 타이핑 게임입니
 - binary: `./server [--port <port> (default: 22345)]`
 - source: `cargo run --bin client -- [--port <port> (default: 22345)]`
 
-## 빌드 방법
+## Build
+### 요구 사항
+- Rust
+- ncurses ^5.98
+  - Ubuntu: `sudo apt install libncurses-dev`
+  - CentOS/RHEL: `sudo dnf install ncurses-devel` or `sudo yum install ncurses-devel`
+### build command
 - `cargo build`
 
 ## 구조
