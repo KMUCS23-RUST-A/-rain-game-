@@ -29,6 +29,9 @@ raingame-rs는 1인 또는 2인으로 플레이 가능한 타이핑 게임입니
 ## 빌드 방법
 - `cargo build`
 
+## 구조
+<img src="https://user-images.githubusercontent.com/37946887/235584987-aa2282ec-58e0-4142-a2b0-1cc74ce64643.png" width="800">
+
 ## 라이선스
 
 이 소프트웨어는 MIT 라이선스로 배포됩니다.
